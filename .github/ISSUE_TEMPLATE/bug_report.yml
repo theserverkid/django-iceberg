@@ -1,0 +1,172 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the sections below.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of the bug
+      placeholder: When I run X, Y happens instead of Z...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Provide detailed steps to reproduce the bug
+      placeholder: |
+        1. Configure database with...
+        2. Create model with...
+        3. Run query...
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should happen?
+      placeholder: The query should return...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happens?
+      placeholder: Instead, it raises...
+    validations:
+      required: true
+
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Traceback
+      description: Full error traceback if applicable
+      render: python
+      placeholder: |
+        Traceback (most recent call last):
+          File "...", line X, in Y
+            ...
+
+  - type: input
+    id: django-iceberg-version
+    attributes:
+      label: Django Iceberg Version
+      description: Output of `pip show django-iceberg`
+      placeholder: e.g., 0.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: django-version
+    attributes:
+      label: Django Version
+      description: Output of `python -m django --version`
+      placeholder: e.g., 6.0.1
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python Version
+      description: Output of `python --version`
+      placeholder: e.g., 3.12.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: storage-backend
+    attributes:
+      label: Storage Backend
+      description: Where is your Iceberg warehouse stored?
+      options:
+        - Local filesystem
+        - AWS S3
+        - Google Cloud Storage
+        - Azure Blob Storage
+        - MinIO
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: catalog-type
+    attributes:
+      label: Catalog Type
+      description: What type of Iceberg catalog are you using?
+      options:
+        - SQLite (local)
+        - REST catalog
+        - Hive metastore
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Database Configuration
+      description: Your DATABASES settings (remove sensitive values)
+      render: python
+      placeholder: |
+        DATABASES = {
+            "default": {
+                "ENGINE": "polars_iceberg.backend",
+                "WAREHOUSE": "...",
+                ...
+            }
+        }
+
+  - type: textarea
+    id: models
+    attributes:
+      label: Model Definition
+      description: Relevant Django model code if applicable
+      render: python
+      placeholder: |
+        class MyModel(models.Model):
+            field = models.CharField(max_length=100)
+            ...
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other information that might help debug the issue
+      placeholder: This started happening after..., This only happens when...
+
+  - type: checkboxes
+    id: searched
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I have searched existing issues for duplicates
+          required: true
+        - label: I have tested on the latest version
+          required: true
+        - label: I have included all required information above
+          required: true

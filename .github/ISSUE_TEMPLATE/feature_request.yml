@@ -1,0 +1,95 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Please describe your idea below.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature Description
+      description: Clear and concise description of the proposed feature
+      placeholder: I would like to be able to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: What problem does this solve? Why is this feature needed?
+      placeholder: |
+        Currently, when I want to X, I have to Y which is cumbersome because...
+        This feature would allow me to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-api
+    attributes:
+      label: Proposed API
+      description: How would you like to use this feature? Show example code.
+      render: python
+      placeholder: |
+        # Example of how the feature would work
+        result = MyModel.objects.some_new_method(param=value)
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered other approaches or workarounds?
+      placeholder: I tried X but it doesn't work because..., An alternative would be Y but...
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation Ideas
+      description: If you have thoughts on how this could be implemented
+      placeholder: This could be implemented by...
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Nice to have
+        - Would be helpful
+        - Important for my use case
+        - Blocking my adoption
+    validations:
+      required: true
+
+  - type: dropdown
+    id: willing-to-contribute
+    attributes:
+      label: Willing to Contribute
+      description: Would you be willing to work on this feature?
+      options:
+        - "Yes, I can submit a PR"
+        - "Yes, with guidance"
+        - "No, I need someone else to implement it"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other relevant information
+      placeholder: Related to..., Similar to feature X in...
+
+  - type: checkboxes
+    id: searched
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I have searched existing issues and discussions for similar requests
+          required: true
+        - label: This feature aligns with Django Iceberg's goals (Django ORM + Iceberg + Polars)
+          required: true
