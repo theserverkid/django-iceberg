@@ -57,11 +57,14 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/django-iceberg"
-Documentation = "https://github.com/yourusername/django-iceberg#readme"
-Repository = "https://github.com/yourusername/django-iceberg"
-Issues = "https://github.com/yourusername/django-iceberg/issues"
-Changelog = "https://github.com/yourusername/django-iceberg/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/theserverkid/django-iceberg"
+Documentation = "https://github.com/theserverkid/django-iceberg#readme"
+Repository = "https://github.com/theserverkid/django-iceberg"
+Issues = "https://github.com/theserverkid/django-iceberg/issues"
+Changelog = "https://github.com/theserverkid/django-iceberg/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["polars_iceberg"]
 
 [build-system]
 requires = ["hatchling"]
