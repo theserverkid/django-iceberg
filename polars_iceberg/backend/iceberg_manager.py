@@ -207,6 +207,9 @@ class IcebergManager:
 
     def _get_table_identifier(self, table_name: str) -> tuple[str, str]:
         """Get the full table identifier (namespace, table_name)."""
+        if "." in table_name:
+            namespace, name = table_name.rsplit(".", 1)
+            return (namespace, name)
         return (self.namespace, table_name)
 
     def table_exists(self, table_name: str) -> bool:

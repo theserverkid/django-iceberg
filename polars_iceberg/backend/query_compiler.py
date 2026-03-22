@@ -188,7 +188,7 @@ class QueryCompiler:
                 else:
                     result.columns = ["*"]
             elif state == "table" and original_value not in (",", ""):
-                result.table_name = self._clean_identifier(original_value)
+                result.table_name = self._clean_table_name(original_value)
                 state = "after_table"
             elif state == "where":
                 if original_value == "?":
@@ -216,7 +216,7 @@ class QueryCompiler:
         sql_str = str(stmt)
 
         # Extract table name
-        match = re.search(r'INSERT\s+INTO\s+"?(\w+)"?', sql_str, re.IGNORECASE)
+        match = re.search(r'INSERT\s+INTO\s+"?([\w.]+)"?', sql_str, re.IGNORECASE)
         if match:
             result.table_name = match.group(1)
 
@@ -243,7 +243,7 @@ class QueryCompiler:
         sql_str = str(stmt)
 
         # Extract table name
-        match = re.search(r'UPDATE\s+"?(\w+)"?', sql_str, re.IGNORECASE)
+        match = re.search(r'UPDATE\s+"?([\w.]+)"?', sql_str, re.IGNORECASE)
         if match:
             result.table_name = match.group(1)
 
@@ -293,7 +293,7 @@ class QueryCompiler:
         sql_str = str(stmt)
 
         # Extract table name
-        match = re.search(r'DELETE\s+FROM\s+"?(\w+)"?', sql_str, re.IGNORECASE)
+        match = re.search(r'DELETE\s+FROM\s+"?([\w.]+)"?', sql_str, re.IGNORECASE)
         if match:
             result.table_name = match.group(1)
 
@@ -323,6 +323,10 @@ class QueryCompiler:
             return match.group(1).strip()
         return None
 
+    def _clean_table_name(self, name: str) -> str:
+        """Remove quotes from a table name, preserving dotted namespace."""
+        return name.strip().strip('"').strip("'").strip("`")
+
     def _clean_identifier(self, name: str) -> str:
         """Remove quotes and table prefixes from identifier names."""
         name = name.strip().strip('"').strip("'").strip("`")
@@ -332,6 +336,10 @@ class QueryCompiler:
             parts = name.split(".")
             name = parts[-1].strip().strip('"').strip("'").strip("`")
         return name
+
+    def _is_count_query(self, query: ParsedQuery) -> bool:
+        """Check if this is a COUNT(*) aggregate query."""
+        return any("__count" in c or "count" in c.lower() for c in query.columns)
 
     def execute_select(self, query: ParsedQuery) -> pl.DataFrame:
         """
@@ -353,6 +361,14 @@ class QueryCompiler:
             # Table might not exist yet
             return pl.DataFrame()
 
+        # Apply WHERE clause first (affects COUNT)
+        if query.where_clause and query.where_params:
+            df = self._apply_where(df, query.where_clause, query.where_params)
+
+        # Handle COUNT(*) queries
+        if self._is_count_query(query):
+            return pl.DataFrame({"__count": [len(df)]})
+
         # Apply column selection
         if query.columns and query.columns != ["*"]:
             # Deduplicate columns while preserving order
@@ -364,10 +380,6 @@ class QueryCompiler:
                     seen.add(c)
             if available_cols:
                 df = df.select(available_cols)
-
-        # Apply WHERE clause
-        if query.where_clause and query.where_params:
-            df = self._apply_where(df, query.where_clause, query.where_params)
 
         # Apply ORDER BY
         if query.order_by:
