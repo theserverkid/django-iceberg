@@ -401,16 +401,39 @@ See [polars_iceberg/CLAUDE.md](polars_iceberg/CLAUDE.md) for detailed limitation
 
 ---
 
+## Storage engine for React API Stack
+
+Django Iceberg is the **object-storage database layer of
+[React API Stack](https://github.com/theserverkid/reactapistack)** — a full-stack
+framework whose system of record is S3. It lets Django run as **stateless, elastic
+compute** (AWS Lambda) over durable object storage, following
+[SurrealDB Gen-3](https://surrealdb.com/platform/surrealds) compute/storage
+separation. The hot path is **Rust-package-first** (Polars + Arrow), and the
+**S3-vs-EFS** latency trade-off is a first-class deployment concern.
+See [docs/serverless-storage-engine.md](docs/serverless-storage-engine.md).
+
 ## Roadmap
 
+> **Performance note.** Iceberg-over-S3 is the **portable, correct-by-default**
+> path today — not yet the **fastest**. S3 first-byte latency and Iceberg's
+> multi-call metadata walk dominate small point reads. The items below close this
+> **behind the `ENGINE` boundary** (no app changes); **EFS** can front S3 as a
+> per-table hot tier in the meantime.
+
+- [x] **Serverless storage engine** — DynamoDB/Glue/REST catalog tier, warm-state
+      reuse across Lambda invocations, and Lambda auto-detection
+      ([`backend/serverless.py`](polars_iceberg/backend/serverless.py),
+      [design note](docs/serverless-storage-engine.md))
+- [x] **EFS hot tier** — opt-in mount for latency-sensitive tables
+- [ ] **Custom Rust S3 backend** — request hedging + byte-range coalescing on a
+      native S3 client, replacing fsspec on the hot path
+- [ ] Write-ahead buffer + async background compaction (bound small-file counts)
 - [ ] Multi-table transactions
-- [ ] Query caching layer
-- [ ] Background compaction scheduler
 - [ ] DuckDB integration for complex queries
 - [ ] GraphQL subscriptions with time travel
 - [ ] Django Admin integration for snapshot browsing
 - [ ] Prometheus metrics exporter
-- [ ] Terraform module for AWS deployment
+- [ ] Terraform / SAM module for serverless AWS deployment
 
 ---
 
