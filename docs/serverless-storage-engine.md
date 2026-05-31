@@ -65,41 +65,70 @@ Object storage trades latency for durability. For a framework that must
 - **Reuse warm state.** Cache catalog clients and resolved table handles in
   module scope so warm invocations skip the metadata walk.
 
-## Performance roadmap (custom S3 + DynamoDB caching backend)
+## The serverless engine (implemented)
 
-Iceberg-over-S3 is currently the **portable, correct-by-default** path — not the
-**fastest**. These optimisations live entirely behind the `ENGINE` boundary, so
-no application code (or React API Stack fat class) changes:
+The serverless engine ships in
+[`polars_iceberg/backend/serverless.py`](../polars_iceberg/backend/serverless.py)
+and is selected automatically. The Django backend (`base.py`) routes to it when
+the database is configured for serverless operation — explicitly via
+`"SERVERLESS": True` or a `dynamodb`/`glue` `CATALOG_TYPE`, or implicitly by
+**auto-detecting an AWS Lambda runtime** (`AWS_LAMBDA_FUNCTION_NAME`). Otherwise
+the plain `IcebergManager` is used unchanged, so local/dev behaviour is
+untouched.
 
-1. **DynamoDB-backed catalog + metadata cache.** Serve snapshot/manifest
-   resolution from single-digit-ms DynamoDB lookups instead of multi-call S3
-   metadata walks. DynamoDB becomes the low-latency index over Iceberg metadata
-   whose bytes still live in S3.
-2. **Custom S3 backend (Rust).** Purpose-built reader/writer with request
-   hedging, byte-range coalescing, and parallel manifest fetch — replacing
-   general-purpose fsspec on the hot path.
-3. **EFS hot tier.** Opt-in, per-table EFS mount for latency-sensitive tables and
-   the local catalog.
-4. **Write-ahead + async compaction.** Buffer writes, commit snapshots in the
-   background, and compact off the request path to bound small-file counts (and
-   thus metadata size).
+What it adds today:
 
-The goal is to **move the floor without moving the ceiling**: the Django ORM API
-above stays identical while hot-read latency drops toward DynamoDB/EFS territory.
-
-## Configuration recap
+- **Low-latency catalog tier.** A **DynamoDB-backed Iceberg catalog** (also Glue
+  and REST) replaces the SQLite/REST default — single-digit-ms metadata pointer
+  lookups instead of a multi-call S3 metadata walk.
+- **Warm-state reuse.** A process-global, thread-safe `WarmCache` keeps catalog
+  clients (indefinitely) and resolved table handles (TTL'd, default 30 s) alive
+  **across warm Lambda invocations**, so repeat requests skip the metadata walk.
+  Writers (`append`/`overwrite`/`delete`/`drop`) invalidate the handle so the next
+  read sees the new snapshot.
+- **EFS hot tier.** Setting `EFS_MOUNT` hosts a shared POSIX catalog/warehouse on
+  Amazon EFS for latency-sensitive tables; S3 stays the durable system of record.
 
 ```python
+# settings.py — production, serverless
 DATABASES = {
     "default": {
         "ENGINE": "polars_iceberg.backend",
-        "WAREHOUSE": "s3://reactapistack-prod/warehouse",
-        "CATALOG_URI": "https://catalog.prod.internal",  # → DynamoDB-backed later
+        "WAREHOUSE": "s3://reactapistack-prod/warehouse",  # system of record
+        "CATALOG_URI": "dynamodb://iceberg-metadata",       # low-latency catalog
         "NAMESPACE": "production",
+        # "SERVERLESS": True,        # force; otherwise auto-detected on Lambda
+        # "CATALOG_TYPE": "dynamodb" # inferred from the dynamodb:// scheme
+        # "DYNAMODB_TABLE": "iceberg-metadata",
+        # "EFS_MOUNT": "/mnt/warehouse",  # optional hot tier
+        # "CACHE_TTL": 30,                # warm table-handle TTL (seconds)
         "OPTIONS": {"s3.region": "us-east-1"},  # auth via Lambda IAM role
     }
 }
 ```
+
+Configuration resolution and the warm cache are covered by
+[`tests/test_serverless.py`](../tests/test_serverless.py) (runs without the
+cloud SDKs installed).
+
+## Performance roadmap (remaining)
+
+Iceberg-over-S3 is the **portable, correct-by-default** path; the DynamoDB
+catalog + warm cache + EFS above close most of the metadata-latency gap. What's
+left lives entirely behind the `ENGINE` boundary, so no application code (or
+React API Stack fat class) changes:
+
+- [x] **DynamoDB-backed catalog + warm metadata cache**
+- [x] **EFS hot tier** (per-deployment mount)
+- [ ] **Custom S3 backend (Rust).** Purpose-built reader/writer with request
+      hedging, byte-range coalescing, and parallel manifest fetch — replacing
+      general-purpose fsspec on the hot path.
+- [ ] **Write-ahead + async compaction.** Buffer writes, commit snapshots in the
+      background, and compact off the request path to bound small-file counts
+      (and thus metadata size).
+
+The goal is to **move the floor without moving the ceiling**: the Django ORM API
+above stays identical while hot-read latency keeps dropping.
 
 See [React API Stack — Serverless Architecture](https://github.com/theserverkid/reactapistack/blob/master/docs/architecture.md)
 for the full-stack picture (API exposure + storage + devops).

@@ -420,10 +420,13 @@ See [docs/serverless-storage-engine.md](docs/serverless-storage-engine.md).
 > **behind the `ENGINE` boundary** (no app changes); **EFS** can front S3 as a
 > per-table hot tier in the meantime.
 
-- [ ] **Custom S3 backend (Rust) with a DynamoDB metadata/cache layer** — collapse
-      the snapshot→manifest walk into single-digit-ms DynamoDB lookups; add request
-      hedging and byte-range coalescing on a native Rust S3 client
-- [ ] **EFS hot tier** — opt-in, per-table mount for latency-sensitive tables
+- [x] **Serverless storage engine** — DynamoDB/Glue/REST catalog tier, warm-state
+      reuse across Lambda invocations, and Lambda auto-detection
+      ([`backend/serverless.py`](polars_iceberg/backend/serverless.py),
+      [design note](docs/serverless-storage-engine.md))
+- [x] **EFS hot tier** — opt-in mount for latency-sensitive tables
+- [ ] **Custom Rust S3 backend** — request hedging + byte-range coalescing on a
+      native S3 client, replacing fsspec on the hot path
 - [ ] Write-ahead buffer + async background compaction (bound small-file counts)
 - [ ] Multi-table transactions
 - [ ] DuckDB integration for complex queries

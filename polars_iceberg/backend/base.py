@@ -219,7 +219,24 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         return params
 
     def get_new_connection(self, conn_params) -> IcebergManager:
-        """Create a new Iceberg manager connection."""
+        """Create a new Iceberg manager connection.
+
+        When the database is configured for serverless operation — explicitly via
+        ``"SERVERLESS": True`` / a DynamoDB|Glue|REST ``CATALOG_TYPE``, or
+        implicitly by detecting an AWS Lambda runtime — the serverless storage
+        engine is used (low-latency catalog tier, warm-state reuse, EFS hot
+        tier). Otherwise the plain Iceberg manager is used unchanged.
+        """
+        from .serverless import ServerlessConfig, create_manager
+
+        config = ServerlessConfig.from_settings(self.settings_dict)
+        if config.serverless or config.catalog_type in ("dynamodb", "glue"):
+            # Ensure a local EFS/disk warehouse exists; object stores need no mkdir.
+            warehouse = config.effective_warehouse
+            if not warehouse.startswith(("s3://", "gs://", "abfs://", "abfss://")):
+                Path(warehouse).mkdir(parents=True, exist_ok=True)
+            return create_manager(config)
+
         warehouse_path = conn_params.get("warehouse_path", "./data/warehouse")
         catalog_uri = conn_params.get("catalog_uri")
         namespace = conn_params.get("namespace", "default")
